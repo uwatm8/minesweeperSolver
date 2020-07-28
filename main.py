@@ -7,6 +7,12 @@ import numpy as np
 START_X = 670
 START_Y = 273
 
+GAMES = 1
+gamesPlayed = 0
+
+MAX_TRIES = 40
+tries = 0
+
 STEP_SIZE = 20
 
 WIDTH = 30
@@ -52,9 +58,9 @@ print(" ------------------ STARTING SOLVER ------------------ ")
 
 # init with correct size
 board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
-
-unknownAround = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
 minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
+minesMarkedIteration = 0
 
 img = None
 
@@ -101,12 +107,17 @@ def clickSquare(x, y):
     click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
 
 def openSquare(x,y):
-    rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+    #print("opening square")
+    click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
 
 def markMine(x,y):
+    global minesMarkedIteration
     global foundBombs
     rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
     board[x][y] = MINE_SQUARE
+
+    print("marking mine")
+    minesMarkedIteration += 1
 
     for square in getSquaresAround(x,y):
         minesAround[square['x']][square['y']] += 1
@@ -163,26 +174,11 @@ def markSimpleUnknown(x,y):
         #print("total", total, " , board", board[x][y] )
 
         if total == boardValue and boardValue != 0:
-            print("")
-            print("")
-            print("")
-            print("ADDING MINES")
-            print("")
-            print("")
-            print("")
-            print("")
-            print("before")
-            printState()
             for square in squaresAround:
                 cellX = square['x']
                 cellY = square['y']
                 if board[cellX][cellY] == UNKNOWN_SQUARE:
                     markMine(cellX, cellY)
-
-            print("after")
-            printState()
-
-
     return total
 
 
@@ -224,30 +220,56 @@ def printState():
 def resetGame():
     click(750, 220)
     click(750, 358)
+    board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+    unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
+    minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
 
-resetGame()
-clickSquare(29,15)
+while gamesPlayed < GAMES:
+    gamesPlayed += 1
 
-screenshot = getScreenshot()
-screen = screenshot.load()
+    board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+    unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
+    minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
+
+    time.sleep(2)
+    resetGame()
+    time.sleep(1)
+    clickSquare(14,7)
+    time.sleep(1)
+
+    screenshot = getScreenshot()
+    screen = screenshot.load()
+
+    minesMarkedIteration = 1
+    while tries < MAX_TRIES and minesMarkedIteration > 0:
+        minesMarkedIteration = 0
+        tries += 1
+        print("iteration: ", tries)
+
+        screenshot = getScreenshot()
+        screen = screenshot.load()
 
 
-for i in range(WIDTH):
-    for j in range(HEIGHT):
-        board[i][j] = getNumberAt(i,j)
+        for i in range(WIDTH):
+            for j in range(HEIGHT):
+                board[i][j] = getNumberAt(i,j)
 
-for x in range(WIDTH):
-    for y in range(HEIGHT):
-        unknownAround[x][y] = getUnknownSquaresAround(x,y)
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                unknownAround[x][y] = getUnknownSquaresAround(x,y)
 
-for x in range(WIDTH):
-    for y in range(HEIGHT):
-        unknownAround[x][y] = markSimpleUnknown(x,y)
-
-#openSquare(x,y)
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                unknownAround[x][y] = markSimpleUnknown(x,y)
 
 
-printState()
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                #open if all mines are found
+                if minesAround[x][y] == board[x][y] and board[x][y] != 0:
+                    openSquare(x,y)
+
+        print("mmi", minesMarkedIteration)
 
 # reset mouse to original position and click
 click(ORIGINAL_MOUSE_POSITION[0], ORIGINAL_MOUSE_POSITION[1])
