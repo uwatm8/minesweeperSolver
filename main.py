@@ -12,8 +12,11 @@ STEP_SIZE = 20
 WIDTH = 30
 HEIGHT = 16
 
-UNKNOWN_SQUARE = " "
-MINE = 10
+TOTAL_BOMBS = 170
+foundBombs = 0
+
+UNKNOWN_SQUARE = '.'
+MINE_SQUARE = '*'
 
 ORIGINAL_MOUSE_POSITION = pyautogui.position()
 
@@ -48,7 +51,10 @@ print(" ------------------ STARTING SOLVER ------------------ ")
 # type: 170 mines
 
 # init with correct size
-board = [ [-2]*HEIGHT for i in range(WIDTH)]
+board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+
+unknownAround = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
 
 img = None
 
@@ -60,10 +66,8 @@ def getNumberAt(xCord, yCord):
 
     screen[x, y] = (0,0,0,0)
 
-    for i in range(len(OFFSET)-1):
-        # take 0 case in the end
-        i=i+1
-
+    # take 0 case in the end, start at 1
+    for i in range(1, len(OFFSET)):
         if screen[x + OFFSET[i]['x'], y + OFFSET[i]['y']] == COLOR[i]:
             return i
 
@@ -82,8 +86,6 @@ def getScreenshot():
     image = myScreenshot.load()
 
     return myScreenshot
-    #return image
-
 
 def click(x, y):
     win32api.SetCursorPos((x,y))
@@ -98,8 +100,105 @@ def rightClick(x, y):
 def clickSquare(x, y):
     click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
 
-def markMine(x,y):
+def openSquare(x,y):
     rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+
+def markMine(x,y):
+    global foundBombs
+    rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+    board[x][y] = MINE_SQUARE
+
+    for square in getSquaresAround(x,y):
+        minesAround[square['x']][square['y']] += 1
+
+    foundBombs += 1
+
+def isInBound(x,y):
+    if x > -1 and x < WIDTH and y > -1 and y < HEIGHT:
+        return True
+    return False
+
+def addPossibleSquare(x,y,squares):
+    if isInBound(x,y):
+        squares.append({'x':x,'y':y})
+
+def getUnknownSquaresAround(x,y):
+    squaresAround = getSquaresAround(x,y)
+
+    total = 0
+
+    if False:
+
+        print(" ")
+        print("x",x)
+        print("y",y)
+        print("board", board[x][y])
+        print(" ")
+
+    for square in squaresAround:
+        cellX = square['x']
+        cellY = square['y']
+
+        if False:
+            print("cell x", cellX)
+            print("cell y", cellY)
+            print("board",  board[cellX][cellY])
+            print(board[cellX][cellY] == UNKNOWN_SQUARE)
+
+        if board[cellX][cellY] == UNKNOWN_SQUARE:
+            total += 1
+
+    return total
+
+
+def markSimpleUnknown(x,y):
+    squaresAround = getSquaresAround(x,y)
+
+    total = getUnknownSquaresAround(x,y)
+
+    if str(board[x][y]).isnumeric():
+        # take into consideration the already marked mines
+        boardValue = board[x][y] - minesAround[x][y]
+
+        #print("total", total, " , board", board[x][y] )
+
+        if total == boardValue and boardValue != 0:
+            print("")
+            print("")
+            print("")
+            print("ADDING MINES")
+            print("")
+            print("")
+            print("")
+            print("")
+            print("before")
+            printState()
+            for square in squaresAround:
+                cellX = square['x']
+                cellY = square['y']
+                if board[cellX][cellY] == UNKNOWN_SQUARE:
+                    markMine(cellX, cellY)
+
+            print("after")
+            printState()
+
+
+    return total
+
+
+def getSquaresAround(x,y):
+    squares = []
+
+    addPossibleSquare(x-1, y, squares)
+    addPossibleSquare(x+1, y, squares)
+    addPossibleSquare(x-1, y-1, squares)
+    addPossibleSquare(x+1, y-1, squares)
+    addPossibleSquare(x-1, y+1, squares)
+    addPossibleSquare(x+1, y+1, squares)
+    addPossibleSquare(x, y-1, squares)
+    addPossibleSquare(x, y+1, squares)
+
+    return squares
 
 def printBoard():
     for j in range(HEIGHT):
@@ -108,13 +207,26 @@ def printBoard():
             row += " " + str(board[i][j])
         print(row)
 
+def printUnknown():
+    for j in range(HEIGHT):
+        row = ""
+        for i in range(WIDTH):
+            row += " " + str(unknownAround[i][j])
+        print(row)
+
+def printState():
+    print("")
+    printBoard()
+    print("")
+    printUnknown()
+    print("")
+
 def resetGame():
     click(750, 220)
     click(750, 358)
 
-
 resetGame()
-clickSquare(10,10)
+clickSquare(29,15)
 
 screenshot = getScreenshot()
 screen = screenshot.load()
@@ -124,11 +236,20 @@ for i in range(WIDTH):
     for j in range(HEIGHT):
         board[i][j] = getNumberAt(i,j)
 
+for x in range(WIDTH):
+    for y in range(HEIGHT):
+        unknownAround[x][y] = getUnknownSquaresAround(x,y)
 
-printBoard()
+for x in range(WIDTH):
+    for y in range(HEIGHT):
+        unknownAround[x][y] = markSimpleUnknown(x,y)
+
+#openSquare(x,y)
+
+
+printState()
 
 # reset mouse to original position and click
 click(ORIGINAL_MOUSE_POSITION[0], ORIGINAL_MOUSE_POSITION[1])
 
-
-screenshot.save('state.png')
+#screenshot.save('state.png')
