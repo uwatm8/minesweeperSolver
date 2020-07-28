@@ -219,7 +219,10 @@ def printState():
 
 def resetGame():
     click(750, 220)
-    click(750, 358)
+    #click(750, 358) # HARD
+
+    click(750, 338) # EASIER
+
     board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
     unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
     minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
