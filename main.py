@@ -1,3 +1,5 @@
+# check README for info
+
 import pyautogui
 from PIL import Image
 import win32api, win32con
@@ -65,8 +67,6 @@ print(" ")
 print(" ------------------ STARTING SOLVER ------------------ ")
 
 
-# solving: https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/mines.html#16x16n40#295541034604532
-# type: 170 mines
 
 # init with correct size
 board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
