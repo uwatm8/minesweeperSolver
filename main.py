@@ -10,7 +10,7 @@ START_Y = 273
 GAMES = 1
 gamesPlayed = 0
 
-MAX_TRIES = 40
+MAX_TRIES = 100
 tries = 0
 
 STEP_SIZE = 20
@@ -58,8 +58,11 @@ print(" ------------------ STARTING SOLVER ------------------ ")
 
 # init with correct size
 board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
-unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
-minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
+unknownAround = [[0]*HEIGHT for i in range(WIDTH)]
+minesAround = [[0]*HEIGHT for i in range(WIDTH)]
+hasOpened = [[False]*HEIGHT for i in range(WIDTH)]
+remainder = [[9]*HEIGHT for i in range(WIDTH)]
+
 minesMarkedIteration = 0
 
 img = None
@@ -84,7 +87,7 @@ def getNumberAt(xCord, yCord):
 
 def getScreenshot():
     # move mouse out of the way
-    time.sleep(0.4)
+    time.sleep(0.5)
     win32api.SetCursorPos((1600, 2000))
     myScreenshot = pyautogui.screenshot()
     myScreenshot.save(r'.\screen.png')
@@ -97,18 +100,22 @@ def click(x, y):
     win32api.SetCursorPos((x,y))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
+    time.sleep(0.02)
 
 def rightClick(x, y):
     win32api.SetCursorPos((x,y))
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,x,y,0,0)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,x,y,0,0)
+    time.sleep(0.02)
 
 def clickSquare(x, y):
     click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
 
 def openSquare(x,y):
     #print("opening square")
-    click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+    if not hasOpened[x][y]:
+        click(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+        hasOpened[x][y] = True
 
 def markMine(x,y):
     global minesMarkedIteration
@@ -116,7 +123,6 @@ def markMine(x,y):
     rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
     board[x][y] = MINE_SQUARE
 
-    print("marking mine")
     minesMarkedIteration += 1
 
     for square in getSquaresAround(x,y):
@@ -210,11 +216,20 @@ def printUnknown():
             row += " " + str(unknownAround[i][j])
         print(row)
 
+def printRemainder():
+    for j in range(HEIGHT):
+        row = ""
+        for i in range(WIDTH):
+            row += " " + str(remainder[i][j])
+        print(row)
+
 def printState():
     print("")
     printBoard()
     print("")
     printUnknown()
+    print("")
+    printRemainder()
     print("")
 
 def resetGame():
@@ -226,17 +241,15 @@ def resetGame():
     board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
     unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
     minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
+    hasOpened = [ [False]*HEIGHT for i in range(WIDTH)]
+    remainder = [[9]*HEIGHT for i in range(WIDTH)]
+    tries = 0
 
 while gamesPlayed < GAMES:
     gamesPlayed += 1
 
-    board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
-    unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
-    minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
-
     time.sleep(2)
     resetGame()
-    time.sleep(1)
     clickSquare(14,7)
     time.sleep(1)
 
@@ -252,10 +265,13 @@ while gamesPlayed < GAMES:
         screenshot = getScreenshot()
         screen = screenshot.load()
 
+        printState()
 
-        for i in range(WIDTH):
-            for j in range(HEIGHT):
-                board[i][j] = getNumberAt(i,j)
+
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                if board[x][y] != '*':
+                    board[x][y] = getNumberAt(x,y)
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -265,15 +281,21 @@ while gamesPlayed < GAMES:
             for y in range(HEIGHT):
                 unknownAround[x][y] = markSimpleUnknown(x,y)
 
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                boardVal = board[x][y]
+
+                if str(boardVal).isnumeric():
+                    remainder[x][y] = boardVal - minesAround[x][y]
+                else:
+                    remainder[x][y] = 9
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
                 #open if all mines are found
                 if minesAround[x][y] == board[x][y] and board[x][y] != 0:
                     openSquare(x,y)
-
-        print("mmi", minesMarkedIteration)
-
+    printState()
 # reset mouse to original position and click
 click(ORIGINAL_MOUSE_POSITION[0], ORIGINAL_MOUSE_POSITION[1])
 
