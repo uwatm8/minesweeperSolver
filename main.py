@@ -242,23 +242,36 @@ def printUnknown():
     for j in range(HEIGHT):
         row = ""
         for i in range(WIDTH):
-            row += " " + str(unknownAround[i][j])
+            if unknownAround[i][j] == 0:
+                row += " " + ' '
+            else:
+                row += " " + str(unknownAround[i][j])
         print(row)
 
 def printRemainder():
     for j in range(HEIGHT):
         row = ""
         for i in range(WIDTH):
-            row += " " + str(remainder[i][j])
+            if remainder[i][j] == 9:
+                if board[i][j] == '*':
+                    row += " " + ' '
+                else:
+                    row += " " + '.'
+            else:
+                row += " " + str(remainder[i][j])
         print(row)
 
 def printState():
     print("")
+    print("BOARD")
     printBoard()
     print("")
+    print("UNKNOWN AROUND")
     printUnknown()
     print("")
+    print("REMAINDER")
     printRemainder()
+    print("")
     print("")
 
 def resetGame():
@@ -305,7 +318,6 @@ while gamesPlayed < GAMES:
 
         printState()
 
-
         for x in range(WIDTH):
             for y in range(HEIGHT):
                 if board[x][y] != '*':
@@ -325,6 +337,8 @@ while gamesPlayed < GAMES:
 
                 if str(boardVal).isnumeric():
                     remainder[x][y] = boardVal - minesAround[x][y]
+                    if remainder[x][y] == 0:
+                        remainder[x][y] = ' '
                 elif unknownAround[x][y] == 0:
                     remainder[x][y] = ' '
                 else:
