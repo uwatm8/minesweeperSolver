@@ -74,12 +74,14 @@ print(" ------------------ STARTING SOLVER ------------------ ")
 
 
 # init with correct size
-board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
+board = [[UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
 nUnknownAround = [[0]*HEIGHT for i in range(WIDTH)]
 minesAround = [[0]*HEIGHT for i in range(WIDTH)]
 hasOpened = [[False]*HEIGHT for i in range(WIDTH)]
 remainder = [[9]*HEIGHT for i in range(WIDTH)]
-unknowns = [[' ']*HEIGHT for i in range(WIDTH)]
+unknownAround = [[' ']*HEIGHT for i in range(WIDTH)]
+
+allMatch = [[' ']*HEIGHT for i in range(WIDTH)]
 
 productiveStepsIteration = 0
 
@@ -91,9 +93,8 @@ def screenshotDaemon(name):
     print("STARTING SCREENSHOT DAEMON")
 
     while not daemonShouldStop:
-        print("Taking screenshot")
+        #print("Taking screenshot")
         screen = getGreedyScreenshot().load()
-
 
     print("STOPPING SCREENSHOT DAEMON")
 
@@ -190,7 +191,7 @@ def markMine(x,y):
 
     productiveStepsIteration += 1
 
-    for square in getSquaresAround(x,y):
+    for square in getCellsAround(x,y):
         minesAround[square['x']][square['y']] += 1
 
     foundBombs += 1
@@ -205,7 +206,7 @@ def addPossibleSquare(x,y,squares):
         squares.append({'x':x,'y':y})
 
 def getUnknownSquaresAround(x,y):
-    squaresAround = getSquaresAround(x,y)
+    squaresAround = getCellsAround(x,y)
 
     total = 0
 
@@ -230,17 +231,87 @@ def getUnknownSquaresAround(x,y):
             print(board[cellX][cellY] == UNKNOWN_SQUARE)
 
         if board[cellX][cellY] == UNKNOWN_SQUARE:
-            unknown.append((cellX, cellY))
+            unknown.append({'x':cellX, 'y':cellY})
             total += 1
 
     return unknown #total
 
 
 def markSimpleUnknown(x,y):
-    squaresAround = getSquaresAround(x,y)
+    squaresAround = getCellsAround(x,y)
 
-    # TODO can take from calculated instead?
-    total = len(getUnknownSquaresAround(x,y))
+    total = nUnknownAround[x][y]
+
+    if str(board[x][y]).isnumeric():
+        # take into consideration the already marked mines
+        boardValue = board[x][y] - minesAround[x][y]
+
+        #print("total", total, " , board", board[x][y] )
+
+        if total == boardValue and boardValue != 0:
+            for square in squaresAround:
+                cellX = square['x']
+                cellY = square['y']
+                if board[cellX][cellY] == UNKNOWN_SQUARE:
+                    markMine(cellX, cellY)
+
+def markComplexUnknown(x,y):
+
+    if remainder[x][y] == ' ' or remainder[x][y] == '.':
+        return
+
+    squaresAround = getCellsAround(x,y)
+
+    total = nUnknownAround[x][y]
+
+    cellsAround = getCellsAround(x,y)
+    nCellsAround = len(cellsAround)
+
+    thisUnknownCells = unknownAround[x][y]
+    thisRemainder = remainder[x][y]
+
+
+    for cell in cellsAround:
+        # should only count opened cells
+        if not cell in thisUnknownCells:
+            matchingCells = []
+
+            otherUnkownCells = unknownAround[cell['x']][cell['y']]
+            nOtherUnkownCells = len(otherUnkownCells)
+
+            otherRemainder = remainder[cell['x']][cell['y']]
+
+            for thisUnknownCell in thisUnknownCells:
+
+                thisX = thisUnknownCell['x']
+                thisY = thisUnknownCell['y']
+
+                matches = 0
+
+                if thisUnknownCell in otherUnkownCells:
+                    matchingCells.append(thisUnknownCell)
+                    matches += 1
+
+                if thisRemainder == 1 and otherRemainder == 2:
+
+                    #print("potential match")
+                    for otherCell in thisUnknownCells:
+                        if not otherCell in matchingCells and len(matchingCells) > 1:
+                            if nOtherUnkownCells == 3:
+                                print("opening special")
+                                #printState()
+
+                                #remainder[otherCell['x']][otherCell['y']] = '@'
+                                #remainder[cell['x']][cell['y']] = 'T'
+                                #remainder[x][y] = 'O'
+                                #printRemainder()
+
+                                #time.sleep(1)
+                                openSquare(otherCell['x'], otherCell['y'])
+                                #exit()
+
+
+
 
     if str(board[x][y]).isnumeric():
         # take into consideration the already marked mines
@@ -256,7 +327,7 @@ def markSimpleUnknown(x,y):
                     markMine(cellX, cellY)
     return total
 
-def getSquaresAround(x,y):
+def getCellsAround(x,y):
     squares = []
 
     addPossibleSquare(x-1, y, squares)
@@ -284,7 +355,7 @@ def printNumberUnknown():
             if nUnknownAround[i][j] == 0:
                 row += " " + ' '
             else:
-                if board[i][j] == '*':
+                if board[i][j] == MINE_SQUARE or board[i][j] == UNKNOWN_SQUARE:
                     row += " " + ' '
                 else:
                     row += " " + str(nUnknownAround[i][j])
@@ -335,7 +406,9 @@ def resetGame():
     minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
     hasOpened = [ [False]*HEIGHT for i in range(WIDTH)]
     remainder = [[9]*HEIGHT for i in range(WIDTH)]
-    unknowns = [[' ']*HEIGHT for i in range(WIDTH)]
+    unknownAround = [[' ']*HEIGHT for i in range(WIDTH)]
+
+    allMatch = [[' ']*HEIGHT for i in range(WIDTH)]
     tries = 0
 
 screenshotDaemon = threading.Thread(target=screenshotDaemon, args=(1,), daemon=True)
@@ -369,7 +442,16 @@ while gamesPlayed < GAMES:
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
-                nUnknownAround[x][y] = markSimpleUnknown(x,y)
+                unknownAround[x][y] = getUnknownSquaresAround(x,y)
+
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                markSimpleUnknown(x,y)
+
+
+        for x in range(WIDTH):
+            for y in range(HEIGHT):
+                markComplexUnknown(x,y)
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
