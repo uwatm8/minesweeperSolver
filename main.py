@@ -5,6 +5,7 @@ from PIL import Image
 import win32api, win32con
 import time
 import numpy as np
+import autopy
 
 START_X = 670
 START_Y = 273
@@ -108,7 +109,7 @@ def isOpen(xCord, yCord):
 
 def getScreenshot():
     # move mouse out of the way
-    time.sleep(1)
+    time.sleep(0.4)
     win32api.SetCursorPos((1600, 2000))
     myScreenshot = pyautogui.screenshot()
     #myScreenshot.save(r'.\screen.png')
@@ -121,35 +122,40 @@ def click(x, y):
     win32api.SetCursorPos((x,y))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
-    time.sleep(0.05)
+    time.sleep(0.01)
 
 def rightClick(x, y):
     win32api.SetCursorPos((x,y))
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,x,y,0,0)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,x,y,0,0)
-    time.sleep(0.05)
+    time.sleep(0.01)
 
 def clickSquare(x, y):
     click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
 
 def openSquare(x,y):
+    global latestOpen
     global productiveStepsIteration
     latestopenX = x
     latestopenY = y
 
-    latestOpen = time.time()
 
 
     #print("opening square")
     if not hasOpened[x][y]:
         click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
         hasOpened[x][y] = True
+        latestOpen = time.time()
         productiveStepsIteration += 1
 
 def markMine(x,y):
     global productiveStepsIteration
     global foundBombs
-    rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+
+    if True:
+        rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
+
+
     board[x][y] = MINE_SQUARE
 
     productiveStepsIteration += 1
@@ -307,8 +313,11 @@ while gamesPlayed < GAMES:
     screen = screenshot.load()
 
     productiveStepsIteration = 1
-    while tries < MAX_TRIES and productiveStepsIteration > 0:
-    #while time.time() - latestOpen < NO_CHANGE_TIMEOUT:
+
+    latestOpen = time.time()
+
+    #while tries < MAX_TRIES and productiveStepsIteration > 0:
+    while time.time() - latestOpen < NO_CHANGE_TIMEOUT:
         productiveStepsIteration = 0
         tries += 1
         print("iteration: ", tries)
@@ -320,7 +329,7 @@ while gamesPlayed < GAMES:
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
-                if board[x][y] != '*':
+                if board[x][y] == UNKNOWN_SQUARE:
                     board[x][y] = getNumberAt(x,y)
 
         for x in range(WIDTH):
