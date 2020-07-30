@@ -6,11 +6,14 @@ import win32api, win32con
 import time
 import numpy as np
 import autopy
+import threading
+
+pyautogui.PAUSE = 0.0001
 
 START_X = 670
 START_Y = 273
 
-GAMES = 1
+GAMES = 3
 gamesPlayed = 0
 
 MAX_TRIES = 100
@@ -26,6 +29,7 @@ foundBombs = 0
 
 # seconds
 NO_CHANGE_TIMEOUT = 2
+daemonShouldStop = False
 
 UNKNOWN_SQUARE = '.'
 MINE_SQUARE = '*'
@@ -80,6 +84,18 @@ productiveStepsIteration = 0
 
 img = None
 
+def screenshotDaemon(name):
+    global screen
+
+    print("STARTING SCREENSHOT DAEMON")
+
+    while not daemonShouldStop:
+        print("Taking screenshot")
+        screen = getGreedyScreenshot().load()
+
+
+    print("STOPPING SCREENSHOT DAEMON")
+
 def getNumberAt(xCord, yCord):
 
     #convert to pixel cordinates
@@ -118,28 +134,42 @@ def getScreenshot():
 
     return myScreenshot
 
+def getGreedyScreenshot():
+    myScreenshot = pyautogui.screenshot()
+
+    return myScreenshot
+
 def click(x, y):
-    win32api.SetCursorPos((x,y))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
-    time.sleep(0.01)
+    #win32api.SetCursorPos((x,y))
+    #win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
+    #win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
+    #time.sleep(0.011)
+
+    pyautogui.click(int(x),int(y))
 
 def rightClick(x, y):
-    win32api.SetCursorPos((x,y))
-    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,x,y,0,0)
-    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,x,y,0,0)
-    time.sleep(0.01)
+    #win32api.SetCursorPos((x,y))
+    #win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,x,y,0,0)
+    #win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,x,y,0,0)
+    #time.sleep(0.011)
+    pyautogui.rightClick(int(x),int(y))
+
 
 def clickSquare(x, y):
     click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
+
+def shouldContinue():
+    global latestOpen
+    return time.time() - latestOpen < NO_CHANGE_TIMEOUT
+
+    #while tries < MAX_TRIES and productiveStepsIteration > 0:
+
 
 def openSquare(x,y):
     global latestOpen
     global productiveStepsIteration
     latestopenX = x
     latestopenY = y
-
-
 
     #print("opening square")
     if not hasOpened[x][y]:
@@ -301,10 +331,12 @@ def resetGame():
     remainder = [[9]*HEIGHT for i in range(WIDTH)]
     tries = 0
 
+screenshotDaemon = threading.Thread(target=screenshotDaemon, args=(1,), daemon=True)
+screenshotDaemon.start()
+
 while gamesPlayed < GAMES:
     gamesPlayed += 1
 
-    time.sleep(2)
     resetGame()
     clickSquare(START_OPEN_X, START_OPEN_Y)
     time.sleep(1)
@@ -316,16 +348,9 @@ while gamesPlayed < GAMES:
 
     latestOpen = time.time()
 
-    #while tries < MAX_TRIES and productiveStepsIteration > 0:
-    while time.time() - latestOpen < NO_CHANGE_TIMEOUT:
+    while shouldContinue():
         productiveStepsIteration = 0
         tries += 1
-        print("iteration: ", tries)
-
-        screenshot = getScreenshot()
-        screen = screenshot.load()
-
-        printState()
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -358,7 +383,10 @@ while gamesPlayed < GAMES:
                 #open if all mines are found
                 if minesAround[x][y] == board[x][y] and board[x][y] != 0:
                     openSquare(x,y)
+
     printState()
+
+daemonShouldStop = True
 # reset mouse to original position and click
 click(ORIGINAL_MOUSE_POSITION[0], ORIGINAL_MOUSE_POSITION[1])
 
