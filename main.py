@@ -13,7 +13,7 @@ pyautogui.PAUSE = 0.0001
 START_X = 670
 START_Y = 273
 
-GAMES = 1
+GAMES = 30
 gamesPlayed = 0
 
 MAX_TRIES = 100
@@ -127,7 +127,7 @@ def isOpen(xCord, yCord):
 
 def getScreenshot():
     # move mouse out of the way
-    time.sleep(0.4)
+    time.sleep(0.6)
     win32api.SetCursorPos((1600, 2000))
     myScreenshot = pyautogui.screenshot()
     #myScreenshot.save(r'.\screen.png')
@@ -285,7 +285,7 @@ def markComplexUnknown(x,y):
                         matchingCells.append(thisUnknownCell)
                         matches += 1
 
-                    if thisRemainder == 1 and otherRemainder > 0 and len(matchingCells) > 1:
+                    if otherRemainder > 0 and len(matchingCells) > thisRemainder:
 
                         if matches == nOtherUnkownCells - 1:
                             #print("------------")
@@ -296,12 +296,19 @@ def markComplexUnknown(x,y):
                                         #time.sleep(1)
                                         #printState()
                                         if board[otherCell['x']][otherCell['y']] != MINE_SQUARE:
-                                            markMine(otherCell['x'], otherCell['y'])
+
+                                            if thisRemainder > 1:
+                                                #print("MINING SPECIAL")
+                                                markMine(otherCell['x'], otherCell['y'])
+                                                #time.sleep(5)
+                                            else:
+                                                markMine(otherCell['x'], otherCell['y'])
 
 
+                        # TODO sometimes there is repeat opens (probably because board state is not up to date)
                         #print("potential match")
                         for otherCell in thisUnknownCells:
-                            if not otherCell in matchingCells:
+                            if not otherCell in matchingCells and str(board[otherCell['x']][otherCell['y']].isnumeric()):
                                 if nOtherUnkownCells == otherRemainder + 1:
                                     #printState()
 
@@ -313,9 +320,17 @@ def markComplexUnknown(x,y):
                                     #time.sleep(1)
 
                                     #do twice
-                                    openSquare(otherCell['x'], otherCell['y'])
-                                    hasOpened[otherCell['x']][otherCell['y']] = False
-                                    #exit()
+
+
+                                    if thisRemainder > 1:
+                                        openSquare(otherCell['x'], otherCell['y'])
+                                        hasOpened[otherCell['x']][otherCell['y']] = False
+                                        #time.sleep(5)
+                                    else:
+                                        openSquare(otherCell['x'], otherCell['y'])
+                                        hasOpened[otherCell['x']][otherCell['y']] = False
+
+
 
 
 
@@ -417,8 +432,8 @@ def resetGame():
 
 
     click(750, 220)
-    click(750, 338) # EASIER
-    #click(750, 358) # HARD
+    #click(750, 338) # EASIER
+    click(750, 358) # HARD
 
 
     board = [[UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
@@ -492,7 +507,7 @@ while gamesPlayed < GAMES:
                 if minesAround[x][y] == board[x][y] and board[x][y] != 0:
                     openSquare(x,y)
 
-    printState()
+    #printState()
 
 daemonShouldStop = True
 # reset mouse to original position and click
