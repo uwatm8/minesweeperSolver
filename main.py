@@ -164,28 +164,23 @@ def clickSquare(x, y):
 def shouldContinue():
     global latestOpen
     #while tries < MAX_TRIES and productiveStepsIteration > 0:
-    return time.time() - latestOpen < NO_CHANGE_TIMEOUT
+    return time.time() - latestOpen < NO_CHANGE_TIMEOUT and tries < MAX_TRIES
 
-def openSquare(x,y):
+def openSquare(x, y):
     global latestOpen
     global productiveStepsIteration
-    latestopenX = x
-    latestopenY = y
 
-    #print("opening square")
     if not hasOpened[x][y]:
         click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
-        hasOpened[x][y] = True
         latestOpen = time.time()
         productiveStepsIteration += 1
+        hasOpened[x][y] = True
 
 def markMine(x,y):
     global productiveStepsIteration
     global foundBombs
 
-    if True:
-        rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
-
+    rightClick(START_X + x*STEP_SIZE, START_Y + y*STEP_SIZE)
 
     board[x][y] = MINE_SQUARE
 
@@ -281,39 +276,51 @@ def markComplexUnknown(x,y):
 
             otherRemainder = remainder[cell['x']][cell['y']]
 
-            for thisUnknownCell in thisUnknownCells:
-
-                thisX = thisUnknownCell['x']
-                thisY = thisUnknownCell['y']
-
-                matches = 0
-
-                if thisUnknownCell in otherUnkownCells:
-                    matchingCells.append(thisUnknownCell)
-                    matches += 1
-
-                if thisRemainder == 1 and otherRemainder == 2:
-
-                    #print("potential match")
-                    for otherCell in thisUnknownCells:
-                        if not otherCell in matchingCells and len(matchingCells) > 1:
-                            if nOtherUnkownCells == 3:
-                                print("opening special")
-                                #printState()
-
-                                #remainder[otherCell['x']][otherCell['y']] = '@'
-                                #remainder[cell['x']][cell['y']] = 'T'
-                                #remainder[x][y] = 'O'
-                                #printRemainder()
-
-                                #time.sleep(1)
-                                openSquare(otherCell['x'], otherCell['y'])
-                                #exit()
+            matches = 0
+            if str(otherRemainder).isnumeric():
+                for thisUnknownCell in thisUnknownCells:
 
 
+                    if thisUnknownCell in otherUnkownCells:
+                        matchingCells.append(thisUnknownCell)
+                        matches += 1
+
+                    if thisRemainder == 1 and otherRemainder > 0 and len(matchingCells) > 1:
+
+                        if matches == nOtherUnkownCells - 1:
+                            #print("------------")
+                            if nOtherUnkownCells == otherRemainder + 1:
+                                #print("11")
+                                for otherCell in otherUnkownCells:
+                                    if not otherCell in matchingCells:
+                                        #time.sleep(1)
+                                        #printState()
+                                        if board[otherCell['x']][otherCell['y']] != MINE_SQUARE:
+                                            markMine(otherCell['x'], otherCell['y'])
 
 
-    if str(board[x][y]).isnumeric():
+                        #print("potential match")
+                        for otherCell in thisUnknownCells:
+                            if not otherCell in matchingCells:
+                                if nOtherUnkownCells == otherRemainder + 1:
+                                    #printState()
+
+                                    #remainder[otherCell['x']][otherCell['y']] = '@'
+                                    #remainder[cell['x']][cell['y']] = 'T'
+                                    #remainder[x][y] = 'O'
+                                    #printRemainder()
+
+                                    #time.sleep(1)
+
+                                    #do twice
+                                    openSquare(otherCell['x'], otherCell['y'])
+                                    hasOpened[otherCell['x']][otherCell['y']] = False
+                                    #exit()
+
+
+
+
+    if str(board[x][y]).isnumeric() and False:
         # take into consideration the already marked mines
         boardValue = board[x][y] - minesAround[x][y]
 
@@ -374,6 +381,16 @@ def printRemainder():
                 row += " " + str(remainder[i][j])
         print(row)
 
+def printHasOpened():
+    for j in range(HEIGHT):
+        row = ""
+        for i in range(WIDTH):
+            if hasOpened[i][j] == True:
+                row += " " + '#'
+            else:
+                row += " " + ' '
+        print(row)
+
 def printState():
     print("")
     print("BOARD")
@@ -384,6 +401,9 @@ def printState():
     print("")
     print("REMAINDER")
     printRemainder()
+    print("")
+    print("OPENED")
+    printHasOpened()
     print("")
     print("")
 
@@ -397,9 +417,9 @@ def resetGame():
 
 
     click(750, 220)
+    click(750, 338) # EASIER
     #click(750, 358) # HARD
 
-    click(750, 338) # EASIER
 
     board = [[UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
     nUnknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
