@@ -13,7 +13,7 @@ pyautogui.PAUSE = 0.0001
 START_X = 670
 START_Y = 273
 
-GAMES = 3
+GAMES = 1
 gamesPlayed = 0
 
 MAX_TRIES = 100
@@ -28,7 +28,7 @@ TOTAL_BOMBS = 170
 foundBombs = 0
 
 # seconds
-NO_CHANGE_TIMEOUT = 2
+NO_CHANGE_TIMEOUT = 1
 daemonShouldStop = False
 
 UNKNOWN_SQUARE = '.'
@@ -75,10 +75,11 @@ print(" ------------------ STARTING SOLVER ------------------ ")
 
 # init with correct size
 board = [ [UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
-unknownAround = [[0]*HEIGHT for i in range(WIDTH)]
+nUnknownAround = [[0]*HEIGHT for i in range(WIDTH)]
 minesAround = [[0]*HEIGHT for i in range(WIDTH)]
 hasOpened = [[False]*HEIGHT for i in range(WIDTH)]
 remainder = [[9]*HEIGHT for i in range(WIDTH)]
+unknowns = [[' ']*HEIGHT for i in range(WIDTH)]
 
 productiveStepsIteration = 0
 
@@ -114,7 +115,6 @@ def getNumberAt(xCord, yCord):
 
     return UNKNOWN_SQUARE
 
-
 def isOpen(xCord, yCord):
     x = START_X + xCord * STEP_SIZE
     y = START_Y + yCord * STEP_SIZE
@@ -122,6 +122,7 @@ def isOpen(xCord, yCord):
     if screen[x + OFFSET[0]['x'], y + OFFSET[0]['y']] == COLOR[0]:
         return True
     return False
+
 
 def getScreenshot():
     # move mouse out of the way
@@ -138,6 +139,7 @@ def getGreedyScreenshot():
     myScreenshot = pyautogui.screenshot()
 
     return myScreenshot
+
 
 def click(x, y):
     #win32api.SetCursorPos((x,y))
@@ -160,10 +162,8 @@ def clickSquare(x, y):
 
 def shouldContinue():
     global latestOpen
-    return time.time() - latestOpen < NO_CHANGE_TIMEOUT
-
     #while tries < MAX_TRIES and productiveStepsIteration > 0:
-
+    return time.time() - latestOpen < NO_CHANGE_TIMEOUT
 
 def openSquare(x,y):
     global latestOpen
@@ -209,6 +209,8 @@ def getUnknownSquaresAround(x,y):
 
     total = 0
 
+    unknown = []
+
     if False:
 
         print(" ")
@@ -228,15 +230,17 @@ def getUnknownSquaresAround(x,y):
             print(board[cellX][cellY] == UNKNOWN_SQUARE)
 
         if board[cellX][cellY] == UNKNOWN_SQUARE:
+            unknown.append((cellX, cellY))
             total += 1
 
-    return total
+    return unknown #total
 
 
 def markSimpleUnknown(x,y):
     squaresAround = getSquaresAround(x,y)
 
-    total = getUnknownSquaresAround(x,y)
+    # TODO can take from calculated instead?
+    total = len(getUnknownSquaresAround(x,y))
 
     if str(board[x][y]).isnumeric():
         # take into consideration the already marked mines
@@ -251,7 +255,6 @@ def markSimpleUnknown(x,y):
                 if board[cellX][cellY] == UNKNOWN_SQUARE:
                     markMine(cellX, cellY)
     return total
-
 
 def getSquaresAround(x,y):
     squares = []
@@ -274,14 +277,17 @@ def printBoard():
             row += " " + str(board[i][j])
         print(row)
 
-def printUnknown():
+def printNumberUnknown():
     for j in range(HEIGHT):
         row = ""
         for i in range(WIDTH):
-            if unknownAround[i][j] == 0:
+            if nUnknownAround[i][j] == 0:
                 row += " " + ' '
             else:
-                row += " " + str(unknownAround[i][j])
+                if board[i][j] == '*':
+                    row += " " + ' '
+                else:
+                    row += " " + str(nUnknownAround[i][j])
         print(row)
 
 def printRemainder():
@@ -303,7 +309,7 @@ def printState():
     printBoard()
     print("")
     print("UNKNOWN AROUND")
-    printUnknown()
+    printNumberUnknown()
     print("")
     print("REMAINDER")
     printRemainder()
@@ -312,7 +318,7 @@ def printState():
 
 def resetGame():
     global board
-    global unknownAround
+    global nUnknownAround
     global minesAround
     global hasOpened
     global remainder
@@ -325,10 +331,11 @@ def resetGame():
     click(750, 338) # EASIER
 
     board = [[UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
-    unknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
+    nUnknownAround = [ [0]*HEIGHT for i in range(WIDTH)]
     minesAround = [ [0]*HEIGHT for i in range(WIDTH)]
     hasOpened = [ [False]*HEIGHT for i in range(WIDTH)]
     remainder = [[9]*HEIGHT for i in range(WIDTH)]
+    unknowns = [[' ']*HEIGHT for i in range(WIDTH)]
     tries = 0
 
 screenshotDaemon = threading.Thread(target=screenshotDaemon, args=(1,), daemon=True)
@@ -339,7 +346,6 @@ while gamesPlayed < GAMES:
 
     resetGame()
     clickSquare(START_OPEN_X, START_OPEN_Y)
-    time.sleep(1)
 
     screenshot = getScreenshot()
     screen = screenshot.load()
@@ -359,11 +365,11 @@ while gamesPlayed < GAMES:
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
-                unknownAround[x][y] = getUnknownSquaresAround(x,y)
+                nUnknownAround[x][y] = len(getUnknownSquaresAround(x,y))
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
-                unknownAround[x][y] = markSimpleUnknown(x,y)
+                nUnknownAround[x][y] = markSimpleUnknown(x,y)
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -373,7 +379,7 @@ while gamesPlayed < GAMES:
                     remainder[x][y] = boardVal - minesAround[x][y]
                     if remainder[x][y] == 0:
                         remainder[x][y] = ' '
-                elif unknownAround[x][y] == 0:
+                elif nUnknownAround[x][y] == 0:
                     remainder[x][y] = ' '
                 else:
                     remainder[x][y] = 9
