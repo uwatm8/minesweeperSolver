@@ -13,7 +13,7 @@ pyautogui.PAUSE = 0.0001
 START_X = 670
 START_Y = 273
 
-GAMES = 30
+GAMES = 10
 gamesPlayed = 0
 
 MAX_TRIES = 100
@@ -279,14 +279,11 @@ def markComplexUnknown(x,y):
             matches = 0
             if str(otherRemainder).isnumeric():
                 for thisUnknownCell in thisUnknownCells:
-
-
                     if thisUnknownCell in otherUnkownCells:
                         matchingCells.append(thisUnknownCell)
                         matches += 1
 
                     if otherRemainder > 0 and len(matchingCells) > thisRemainder:
-
                         if matches == nOtherUnkownCells - 1:
                             #print("------------")
                             if nOtherUnkownCells == otherRemainder + 1:
@@ -330,10 +327,13 @@ def markComplexUnknown(x,y):
                                         openSquare(otherCell['x'], otherCell['y'])
                                         hasOpened[otherCell['x']][otherCell['y']] = False
 
-
-
-
-
+                    if otherRemainder > 0 and len(matchingCells) > thisRemainder and len(matchingCells) > otherRemainder and thisRemainder > 0 and matches == nOtherUnkownCells:
+                        for thisCell in cellsAround:
+                            if not thisCell in matchingCells:
+                                if len(thisUnknownCells) > thisRemainder:
+                                    if board[thisCell['x']][thisCell['y']] == UNKNOWN_SQUARE:
+                                        openSquare(thisCell['x'], thisCell['y'])
+                                        hasOpened[thisCell['x']][thisCell['y']] = False
 
     if str(board[x][y]).isnumeric() and False:
         # take into consideration the already marked mines
@@ -417,9 +417,10 @@ def printState():
     print("REMAINDER")
     printRemainder()
     print("")
-    print("OPENED")
-    printHasOpened()
-    print("")
+    if False:
+        print("OPENED")
+        printHasOpened()
+        print("")
     print("")
 
 def resetGame():
@@ -432,8 +433,8 @@ def resetGame():
 
 
     click(750, 220)
-    #click(750, 338) # EASIER
-    click(750, 358) # HARD
+    click(750, 338) # EASIER
+    #click(750, 358) # HARD
 
 
     board = [[UNKNOWN_SQUARE]*HEIGHT for i in range(WIDTH)]
@@ -465,6 +466,8 @@ while gamesPlayed < GAMES:
     while shouldContinue():
         productiveStepsIteration = 0
         tries += 1
+
+        print("iteration", tries)
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -507,7 +510,7 @@ while gamesPlayed < GAMES:
                 if minesAround[x][y] == board[x][y] and board[x][y] != 0:
                     openSquare(x,y)
 
-    #printState()
+    printState()
 
 daemonShouldStop = True
 # reset mouse to original position and click
