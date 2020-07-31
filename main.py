@@ -7,8 +7,12 @@ import time
 import numpy as np
 import autopy
 import threading
+import keyboard
 
-pyautogui.PAUSE = 0.0001
+#pyautogui.PAUSE = 0.0001
+pyautogui.MINIMUM_DURATION = 0
+pyautogui.MINIMUM_SLEEP = 0
+pyautogui.PAUSE = 0
 
 START_X = 670
 START_Y = 273
@@ -16,7 +20,9 @@ START_Y = 273
 GAMES = 10
 gamesPlayed = 0
 
-MAX_TRIES = 100
+screenshotLock = False
+
+MAX_TRIES = 75
 tries = 0
 
 STEP_SIZE = 20
@@ -49,8 +55,8 @@ latestOpen = time.time()
 OFFSET = {
     0: {'x':-5, 'y':-5},
     1: {'x':0, 'y':-4},
-    2: {'x':1, 'y':0},
-    3: {'x':1, 'y':0},
+    2: {'x':1, 'y':-5},
+    3: {'x':1, 'y':-4},
     4: {'x':1, 'y':0},
     5: {'x':1, 'y':0},
     6: {'x':1, 'y':0},
@@ -60,8 +66,8 @@ OFFSET = {
 COLOR = {
     0: (218, 218, 218),
     1: (0,0,255),
-    2: (51,149,51),
-    3: (251,27,27),
+    2: (26,139,26),
+    3: (242,77,77),
     4: (61,61,153),
     5: (186,140,140),
     6: (110,173,173),
@@ -89,12 +95,14 @@ img = None
 
 def screenshotDaemon(name):
     global screen
+    global board
 
     print("STARTING SCREENSHOT DAEMON")
 
     while not daemonShouldStop:
         #print("Taking screenshot")
-        screen = getGreedyScreenshot().load()
+        if not screenshotLock:
+            screen = getGreedyScreenshot().load()
 
     print("STOPPING SCREENSHOT DAEMON")
 
@@ -106,12 +114,36 @@ def getNumberAt(xCord, yCord):
 
     screen[x, y] = (0,0,0,0)
 
+    isZero = False
+
     # take 0 case in the end, start at 1
     for i in range(1, len(OFFSET)):
         if screen[x + OFFSET[i]['x'], y + OFFSET[i]['y']] == COLOR[i]:
             return i
 
+
     if screen[x + OFFSET[0]['x'], y + OFFSET[0]['y']] == COLOR[0]:
+        #print("returning 0")
+        isZero = True
+
+    # try again if 0 is found, due to async issues with screenshot daemon
+    for i in range(1, len(OFFSET)):
+        if screen[x + OFFSET[i]['x'], y + OFFSET[i]['y']] == COLOR[i]:
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            print("ASYNC BULLSHIT")
+            return i
+
+    if isZero:
         return 0
 
     return UNKNOWN_SQUARE
@@ -127,7 +159,7 @@ def isOpen(xCord, yCord):
 
 def getScreenshot():
     # move mouse out of the way
-    time.sleep(0.6)
+    time.sleep(0.3)
     win32api.SetCursorPos((1600, 2000))
     myScreenshot = pyautogui.screenshot()
     #myScreenshot.save(r'.\screen.png')
@@ -146,7 +178,6 @@ def click(x, y):
     #win32api.SetCursorPos((x,y))
     #win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
     #win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
-    #time.sleep(0.011)
 
     pyautogui.click(int(x),int(y))
 
@@ -163,16 +194,25 @@ def clickSquare(x, y):
 
 def shouldContinue():
     global latestOpen
-    #while tries < MAX_TRIES and productiveStepsIteration > 0:
+
+    if keyboard.is_pressed('q'):
+        exit()
+
     return time.time() - latestOpen < NO_CHANGE_TIMEOUT and tries < MAX_TRIES
 
-def openSquare(x, y):
+
+
+def openSquare(x, y, markOpened):
     global latestOpen
     global productiveStepsIteration
 
     if not hasOpened[x][y]:
-        click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
+        if len(getUnknownSquaresAround(x,y)) > 0 or not markOpened:
+            click(START_X + x*STEP_SIZE-5, START_Y + y*STEP_SIZE-5)
+
         latestOpen = time.time()
+
+    if markOpened:
         productiveStepsIteration += 1
         hasOpened[x][y] = True
 
@@ -320,20 +360,17 @@ def markComplexUnknown(x,y):
 
 
                                     if thisRemainder > 1:
-                                        openSquare(otherCell['x'], otherCell['y'])
-                                        hasOpened[otherCell['x']][otherCell['y']] = False
-                                        #time.sleep(5)
+                                        openSquare(otherCell['x'], otherCell['y'], False)
                                     else:
-                                        openSquare(otherCell['x'], otherCell['y'])
-                                        hasOpened[otherCell['x']][otherCell['y']] = False
+                                        openSquare(otherCell['x'], otherCell['y'], False)
 
                     if otherRemainder > 0 and len(matchingCells) > thisRemainder and len(matchingCells) > otherRemainder and thisRemainder > 0 and matches == nOtherUnkownCells:
                         for thisCell in cellsAround:
                             if not thisCell in matchingCells:
                                 if len(thisUnknownCells) > thisRemainder:
                                     if board[thisCell['x']][thisCell['y']] == UNKNOWN_SQUARE:
-                                        openSquare(thisCell['x'], thisCell['y'])
-                                        hasOpened[thisCell['x']][thisCell['y']] = False
+                                        openSquare(thisCell['x'], thisCell['y'], False)
+                                        #hasOpened[thisCell['x']][thisCell['y']] = False
 
     if str(board[x][y]).isnumeric() and False:
         # take into consideration the already marked mines
@@ -463,16 +500,30 @@ while gamesPlayed < GAMES:
 
     latestOpen = time.time()
 
+
     while shouldContinue():
         productiveStepsIteration = 0
         tries += 1
 
-        print("iteration", tries)
+        #screenshot = getGreedyScreenshot()
+        #screen = screenshot.load()
+
+
+        screenshotLock = True
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
                 if board[x][y] == UNKNOWN_SQUARE:
+                    old = board[x][y]
+                    new = getNumberAt(x,y)
+
+                    if str(old).isnumeric() and str(new).isnumeric():
+
+                        if old > new:
+                            print("BRUUUUUUUUUUUUUUUUUUH")
                     board[x][y] = getNumberAt(x,y)
+
+        screenshotLock = False
 
         for x in range(WIDTH):
             for y in range(HEIGHT):
@@ -508,9 +559,9 @@ while gamesPlayed < GAMES:
             for y in range(HEIGHT):
                 #open if all mines are found
                 if minesAround[x][y] == board[x][y] and board[x][y] != 0:
-                    openSquare(x,y)
+                    openSquare(x, y, True)
 
-    printState()
+    #printState()
 
 daemonShouldStop = True
 # reset mouse to original position and click
