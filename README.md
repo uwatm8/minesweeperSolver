@@ -11,6 +11,12 @@ Currently made for Windows, 1920x1080 screen in the Chrome browser.
 
 ## Playing
 
+#### Example
+
+https://user-images.githubusercontent.com/15084099/147667394-265423c0-dce7-46ff-b21e-0940c62480a1.mp4
+
+
+
 #### Bot plays on:
 https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/mines.html#16x16n40#295541034604532
 
