@@ -13,7 +13,7 @@ Currently made for Windows, 1920x1080 screen in the Chrome browser.
 
 #### Example
 
-https://user-images.githubusercontent.com/15084099/147666901-2c6415f1-58d0-40f6-9a1c-69a30b9c1bf3.mp4
+https://user-images.githubusercontent.com/15084099/147667394-265423c0-dce7-46ff-b21e-0940c62480a1.mp4
 
 
 
